@@ -72,7 +72,13 @@ Each rocket’s orientation dynamically follows the **tangent of the curve**, cr
 Open a terminal in the project’s root folder and run:
 
 - **Linux/macOS:**
+
   ```bash
   g++ main.cpp -o rocket -lGL -lGLU -lglut
   ./rocket
+  ```
+
+- **Windows(MinGW):**
+  ```g++ main.cpp -o rocket -lfreeglut -lopengl32 -lglu32
+  rocket.exe
   ```
