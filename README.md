@@ -1,7 +1,7 @@
 # Rocket Animation with OpenGL
 
 [![GitHub](https://img.shields.io/badge/GitHub-@victor--kauan--coder-181717?logo=github&style=for-the-badge)](https://github.com/victor-kauan-coder)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Victor%20Miranda-0A66C2?logo=linkedin&style=for-the-badge)](https://www.linkedin.com/in/victor-miranda-5005ab304)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Victor%20Miranda-0A66C2?logo=linkedin&style=for-the-badge)](https://www.linkedin.com/in/victor-miranda-5342a6337)
 
 A Computer Graphics project written in **C++** that renders a 2D scene with two animated rockets following a **heart-shaped trajectory** against a space-themed background.
 
