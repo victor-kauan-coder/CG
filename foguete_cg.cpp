@@ -1,458 +1,470 @@
-
-#ifdef __APPLE__ // MacOS
-    #define GL_SILENCE_DEPRECATION
+// This preprocessor directive checks if the code is being compiled on a macOS system.
+#ifdef __APPLE__ // For macOS
+    #define GL_SILENCE_DEPRECATION // Silences warnings about deprecated OpenGL functions on Mac.
     #include <GLUT/glut.h>
     #include <OpenGL/gl.h>
     #include <OpenGL/glu.h>
-#else // Windows e Linux
+#else // For Windows and Linux
     #include <GL/glut.h>
     #include <GL/gl.h>
     #include <GL/glu.h>
+    // The windows.h header is generally not necessary for basic GLUT/OpenGL applications,
+    // but it's kept here as it was in the original code.
     #include <windows.h>
 #endif
+
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
 #include <vector>
-#include "circulo.h"
+#include "circulo.h" // Assumes this header contains a function to draw circles, like drawCircle().
+
+// Define the ASCII value for the ESC key for better readability.
 #define ESC 27
 
 using namespace std;
 
-vector<pair<float,float> > caminho;
+// --- Global Variables ---
 
-vector<pair<float,float> > caminho_2;
+// Vectors to store the coordinates of the rockets' paths (trails).
+vector<pair<float, float>> rocket1_path;
+vector<pair<float, float>> rocket2_path;
 
-GLfloat rosa_caminho[3] = {1.0, 0.0, 1.0};
+// --- Color Definitions (in RGB format) ---
 
-GLfloat vermelho_caminho[3] = {1.0,0,0};
+// Colors for the rocket trails.
+GLfloat path1_color[3] = {1.0, 0.0, 1.0}; // Pink
+GLfloat path2_color[3] = {1.0, 0.0, 0.0}; // Red
 
-GLfloat cor_estrelas[3] = {0.988,0.988,0.063};
+// Color for the stars.
+GLfloat star_color[3] = {0.988, 0.988, 0.063}; // Yellow
 
-GLfloat cores_lua[2][3] = {
-	{0.870, 0.851, 0.765}, //cor primaria
-	{0.772, 0.741, 0.59} //cor secundaria
+// Colors for the moon (primary body color and crater color).
+GLfloat moon_colors[2][3] = {
+    {0.870, 0.851, 0.765}, // Primary moon color
+    {0.772, 0.741, 0.59}  // Secondary color for craters
 };
 
-GLfloat cores_foguete[6][3] = {
-    {1.0, 0.75, 0.80},   // Rosa claro
-    {1.0, 0.43, 0.71},   // Rosa choque
-    {0.86, 0.44, 0.58},  // Rosa médio
-    {0.74, 0.20, 0.64},  // Roxo rosado
-    {1.0, 0.63, 0.63},   // Rosa pêssego
-    {0.94, 0.0, 0.5}     // Rosa forte / pink
+// Color palette for the first rocket.
+GLfloat rocket1_colors[6][3] = {
+    {1.0, 0.75, 0.80},  // Light Pink (for flame)
+    {1.0, 0.43, 0.71},  // Shocking Pink (for flame)
+    {0.86, 0.44, 0.58}, // Medium Pink (for window)
+    {0.74, 0.20, 0.64}, // Rosy Purple (for window)
+    {1.0, 0.63, 0.63},  // Peach Pink (for body)
+    {0.94, 0.0, 0.5}    // Strong Pink (for fins)
 };
 
-GLfloat cores_foguete_2[6][3] = {
-	{1.0,1.0,0},
-	{1.0, 0.557, 0.004},
-	{0.3098, 0.5059, 0.7373},
-	{0.106, 0.2, 0.309},
-	{0.749, 0.749, 0.749},
-	{1.0,0,0}
+// Color palette for the second rocket.
+GLfloat rocket2_colors[6][3] = {
+    {1.0, 1.0, 0},           // Yellow
+    {1.0, 0.557, 0.004},     // Orange
+    {0.3098, 0.5059, 0.7373},// Blue
+    {0.106, 0.2, 0.309},     // Dark Blue
+    {0.749, 0.749, 0.749},   // Gray
+    {1.0, 0, 0}              // Red
 };
-		
-float escala = 0.8f;							
-float t_param = 0.0f;   // parâmetro para o coração
-float step = 0.02f;     // passo de incremento (velocidade)
-float escala_1 = 10.0f;   // escala para ajustar o tamanho
-float centroX = 400.0f; // posição central
-float centroY = 200.0f;	
-float raio = 100;	
-float t_param_2 = 2*M_PI; 
-GLfloat foguetePosX = 420.0f;
-GLfloat foguetePosY = 20.0f;
-GLfloat fogueteAngulo = 45.0f;
-GLfloat foguetePosX_2 = 420.0f;
-GLfloat foguetePosY_2 = 20.0f;
-GLfloat fogueteAngulo_2 = 45.0f;	
-GLfloat anguloRad = fogueteAngulo * M_PI / 180.0;	
-GLfloat velocidadeFoguete = 2.0f;
-						
-void init(void);
+
+// --- Animation and Position Parameters ---
+
+float rocket2_scale = 0.8f;      // Scale of the second rocket.
+float time_param_1 = 0.0f;       // Parameter 't' for the first rocket's heart curve equation.
+float time_step = 0.02f;         // Increment step for the time parameter, controls animation speed.
+float path_scale = 10.0f;        // Scalar to adjust the overall size of the path.
+float path_centerX = 400.0f;     // X-coordinate for the center of the path.
+float path_centerY = 200.0f;     // Y-coordinate for the center of the path.
+float time_param_2 = 2 * M_PI;   // Parameter 't' for the second rocket's heart curve equation.
+
+// Initial positions and angle for the first rocket. These will be updated by the 'update' function.
+GLfloat rocket1_posX = 420.0f;
+GLfloat rocket1_posY = 20.0f;
+GLfloat rocket1_angle = 45.0f;
+
+// Initial positions and angle for the second rocket.
+GLfloat rocket2_posX = 420.0f;
+GLfloat rocket2_posY = 20.0f;
+GLfloat rocket2_angle = 45.0f;
+
+// --- Function Prototypes ---
+void initialize(void);
 void reshape(int w, int h);
 void keyboard(unsigned char key, int x, int y);
-void keyboard_special(int key, int x, int y);
-void atualiza(int value);
+void update(int value);
 void display(void);
-void desenhaCaminho();
+void drawPath(vector<pair<float, float>> path, GLfloat color[3]);
 
-class Estrela {
+// Represents a single star in the scene.
+class Star {
 private:
-    GLfloat v[3][2];
-    GLfloat x, y, scale;
-    GLfloat cor[3];
+    GLfloat vertices[3][2]; // Vertices for one triangle of the star.
+    GLfloat x, y, scale;    // Position and scale.
+    GLfloat color[3];       // Star's color.
+
 public:
-    Estrela(GLfloat posX, GLfloat posY,GLfloat escala, GLfloat cor_estrelas[3]) {
+    // Constructor to initialize the star's properties.
+    Star(GLfloat posX, GLfloat posY, GLfloat scale, GLfloat star_color[3]) {
         x = posX;
         y = posY;
-        scale = escala;
-        for(int i = 0; i < 3;i++) cor[i] = cor_estrelas[i];
+        this->scale = scale;
+        for (int i = 0; i < 3; i++) this->color[i] = star_color[i];
 
-		v[0][0] = 0;   v[0][1] = 100;
-        v[1][0] = -100; v[1][1] = -50;
-        v[2][0] = 100; v[2][1] = -50;
+        // Define the vertices for an upward-pointing triangle.
+        vertices[0][0] = 0;    vertices[0][1] = 100;
+        vertices[1][0] = -100; vertices[1][1] = -50;
+        vertices[2][0] = 100;  vertices[2][1] = -50;
     }
 
+    // Renders the star on the screen.
     void draw() const {
-        glColor3fv(cor);
+        glColor3fv(color);
 
+        // Draw the first (upward) triangle.
         glPushMatrix();
             glTranslatef(x, y, 0);
             glScalef(scale, scale, 1.0);
             glBegin(GL_TRIANGLES);
-                glVertex2fv(v[0]);
-                glVertex2fv(v[1]);
-                glVertex2fv(v[2]);
+                glVertex2fv(vertices[0]);
+                glVertex2fv(vertices[1]);
+                glVertex2fv(vertices[2]);
             glEnd();
         glPopMatrix();
 
+        // Draw the second (downward) triangle by rotating 180 degrees.
         glPushMatrix();
             glTranslatef(x, y, 0);
             glRotatef(180, 0, 0, 1);
-            glScalef(scale, scale, 1.0); 
+            glScalef(scale, scale, 1.0);
             glBegin(GL_TRIANGLES);
-                glVertex2fv(v[0]);
-                glVertex2fv(v[1]);
-                glVertex2fv(v[2]);
+                glVertex2fv(vertices[0]);
+                glVertex2fv(vertices[1]);
+                glVertex2fv(vertices[2]);
             glEnd();
-            
         glPopMatrix();
     }
 };
 
-class Lua {
-	private:
-    	GLfloat x, y, raio;
-    	GLfloat cor[3];
-    	GLfloat cor_secundaria[3];
-	public:
-		Lua(GLfloat posX, GLfloat posY,GLfloat raioLua, GLfloat cores_lua[2][3]){
-			x = posX;
-        	y = posY;
-	        raio = raioLua;
-	       	for(int i = 0;i < 3;i++) cor[i] = cores_lua[0][i];
-	       	for(int i = 0;i < 3;i++) cor_secundaria[i] = cores_lua[1][i];
-    		
-		}
-		
-		void draw() const {
-		
-		    glPushMatrix(); 
-		
-		    glTranslatef(x, y, 0); 
-		
-		    glColor3fv(cor);
-		    desenhaCirculo(raio, 360, true);
-		
-		    glColor3fv(cor_secundaria);
-		
-		    // Cratera 1
-		    glPushMatrix(); 
-		    glTranslatef(raio * 0.5f, raio * 0.2f, 0); 
-		    desenhaCirculo(raio / 3.5, 360, true);
-		    glPopMatrix();
-		
-		    // Cratera 2
-		    glPushMatrix(); 
-		    glTranslatef(raio * -0.4f, raio * 0.5f, 0); 
-		    desenhaCirculo(raio / 3.5, 360, true); 
-		    glPopMatrix();  
-		
-		    // Cratera 3
-		    glPushMatrix(); 
-		    glTranslatef(raio * -0.2f, raio * -0.6f, 0);
-		    desenhaCirculo(raio / 3.5, 360, true);
-		    glPopMatrix();  
-		    glPopMatrix(); 
-		}
-		
-};
+// Represents the moon in the scene.
+class Moon {
+private:
+    GLfloat x, y, radius;             // Position and radius.
+    GLfloat primary_color[3];         // Main color of the moon.
+    GLfloat secondary_color[3];       // Color for the craters.
 
-
-class Foguete{
-	private:
-		GLfloat x,y,scala, angulo;
-		GLfloat cor_fogo[3];
-		GLfloat cor_fogo_2[3];
-		GLfloat cor_espelho[3];
-		GLfloat cor_espelho_2[3];
-		GLfloat cor_principal[3];
-		GLfloat cor_asas[3];
-	public:
-		Foguete(GLfloat posX, GLfloat posY,GLfloat angulo_inclinacao, GLfloat escala,GLfloat cores_foguete[6][3]){
-			x = posX;
-			y = posY;
-			scala = escala;
-			angulo = angulo_inclinacao;
-			for(int i = 0;i < 3;i++)	cor_fogo[i] = cores_foguete[0][i];
-			for(int i = 0;i < 3;i++)	cor_fogo_2[i] = cores_foguete[1][i];
-			for(int i = 0;i < 3;i++)	cor_espelho[i] = cores_foguete[2][i];
-			for(int i = 0;i < 3;i++)	cor_espelho_2[i] = cores_foguete[3][i];
-			for(int i = 0;i < 3;i++)	cor_principal[i] = cores_foguete[4][i];
-			for(int i = 0;i < 3;i++)	cor_asas[i] = cores_foguete[5][i];
-			
-		}
-	void draw() const {
-		//corpo do foguete
-		glColor3fv(cor_principal);
-		glPushMatrix(); 
-			glTranslated(x,y,0);
-			glScaled(scala,scala,0);
-			glRotated(angulo,0,0,-1);
-			glBegin(GL_QUADS);
-	                glVertex2f(0,0);
-	                glVertex2f(40,0);
-	                glVertex2f(40,90);
-	                glVertex2f(0,90);
-			glEnd();
-			
-			glColor3fv(cor_espelho);
-				glBegin(GL_QUADS);
-	                glVertex2f(0,0);
-	                glVertex2f(40,0);
-	                glVertex2f(40,8);
-	                glVertex2f(0,8);
-			glEnd();
-			
-			//Asas do foguete
-			glPushMatrix();
-				glScalef(0.9,1,0);
-				glTranslatef(47,90,0);
-				glRotatef(90,0,0,1);
-				glColor3fv(cor_asas);
-				glBegin(GL_TRIANGLES);
-					glVertex2f(0,0);
-					glVertex2f(25,25);
-					glVertex2f(0,50);
-				glEnd();
-			glPopMatrix();
-			
-			
-			
-			glPushMatrix();
-				glRotatef(23,0,0,1);
-				glTranslatef(-25,0,0);
-				glBegin(GL_QUADS);
-					glVertex2f(0,0);
-					glVertex2f(25,0);
-					glVertex2f(35,24);
-					glVertex2f(10,24);
-					
-				glEnd();
-			glPopMatrix();
-			
-			glPushMatrix();
-				glTranslatef(31,5,0);
-				glRotatef(23,0,0,-1);
-				glBegin(GL_QUADS);
-					glVertex2f(10,0);
-					glVertex2f(35,0);
-					glVertex2f(25,24);
-					glVertex2f(0,24);
-					
-				glEnd();
-			glPopMatrix();		
-			
-			
-			
-			//espelho do foguete 
-			glPushMatrix();
-				glTranslated(20,67,0);
-				glColor3fv(cor_espelho_2);
-				desenhaCirculo(15,360,true);
-				glColor3fv(cor_espelho);
-				desenhaCirculo(12,360,true);
-			glPopMatrix();
-			
-			//fogo do foguete
-			glPushMatrix();
-				glScaled(0.6,0.6,0);
-				glTranslated(-4,0,0);
-				glRotated(90,0,0,-1);
-				glColor3fv(cor_fogo_2);
-				glBegin(GL_TRIANGLES);
-					glVertex2f(0,0);
-					glVertex2f(0,70);
-					glVertex2f(70,35);
-				glEnd();
-			glPopMatrix();
-			
-			glPushMatrix();
-				glColor3fv(cor_fogo);
-				glScaled(0.35,0.35,0);
-				glTranslated(16,0,0);
-				glRotated(90,0,0,-1);
-				glBegin(GL_TRIANGLES);
-					glVertex2f(0,0);
-					glVertex2f(0,70);
-					glVertex2f(70,35);
-				glEnd();
-			glPopMatrix();
-			
-			//asa do foguete primeiro plano
-			glPushMatrix();
-			glColor3fv(cor_asas);
-				glTranslatef(15,-15,0);
-				glBegin(GL_QUADS);
-					glVertex2f(0,0);
-					glVertex2f(8,0);
-					glVertex2f(8,40);
-					glVertex2f(0,40);
-					
-				glEnd();
-			glPopMatrix();
-		
-		glPopMatrix();
-		
-	}
-	void girar(){
-		angulo+=5.0f;
-	}
-};
-
-
-int main(int argc, char** argv){
-    glutInit(&argc, argv); // Passagens de parametros C para o glut
-    glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB); // Selecao do Modo do Display e do Sistema de cor utilizado
-    glutInitWindowSize (800, 400);  // Tamanho da janela do OpenGL
-    glutInitWindowPosition (100, 100); //Posicao inicial da janela do OpenGL
-    glutCreateWindow ("Imagem Foguete: Trabalho de CG"); // Da nome para uma janela OpenGL
-    init(); // Chama a funcao init();
-    glutReshapeFunc(reshape); //funcao callback para redesenhar a tela
-    glutDisplayFunc(display); //funcao callback de desenho
-    glutKeyboardFunc(keyboard); //funcao callback do teclado
-  	glutTimerFunc(16, atualiza, 0);
-    glutMainLoop(); // executa o loop do OpenGL
-    return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main()
-}
-
-
-
-void atualiza(int value) {
-    
-    float x = 16 * pow(sin(t_param), 3);
-    float y = 13*cos(t_param) - 5*cos(2*t_param) - 2*cos(3*t_param) - cos(4*t_param);
-    float x2 = 16 * pow(sin(t_param_2), 3);
-    float y2 = 13*cos(t_param_2) - 5*cos(2*t_param_2) - 2*cos(3*t_param_2) - cos(4*t_param_2);
-	//float x = raio*cos(t_param);
-	//float y = raio*sin(t_param);
-	//float x2 = t_param_2;
-	//float y2 = -(1/400.0)*x2*x2+ 2*x2;
-    foguetePosX = centroX + escala_1 * x;
-    foguetePosY = centroY + escala_1 * y;
-     foguetePosX_2 = centroX  + escala_1 * x2;
-    foguetePosY_2 = centroY + escala_1 * y2;
-    //foguetePosX_2 = x2;
-    //foguetePosY_2 = y2;
-	//float dx = -raio*sin(t_param);
-	//float dy = raio*cos(t_param);
-	//float dx_2 = 1.0f;
-	//float dy_2 = (-1/200.0)*t_param_2+2;
-
-    float dx = 48 * pow(sin(t_param), 2) * cos(t_param);
-    float dy = -13*sin(t_param) + 10*sin(2*t_param) + 6*sin(3*t_param) + 4*sin(4*t_param);
-    
-    float dx_2 = 48 * pow(sin(t_param_2), 2) * cos(t_param_2);
-    float dy_2 = -13*sin(t_param_2) + 10*sin(2*t_param_2) + 6*sin(3*t_param_2) + 4*sin(4*t_param_2);
-
-
-    fogueteAngulo = atan2(dx, dy)*180.0f / M_PI;
-    
-    fogueteAngulo_2 =  atan2(dx_2, dy_2)*180.0f / M_PI - 180;
-
-    // Salva no rastro
-    caminho.push_back({foguetePosX, foguetePosY});
-	caminho_2.push_back({foguetePosX_2,foguetePosY_2});
-    // Avança
-    t_param += step;
-    
-    //t_param_2+=velocidadeFoguete;
-    t_param_2-=step;
-
-    //if(t_param_2 > 100 && t_param_2 < 200) escala+=0.01;
-  	//if(t_param_2 > 200 && t_param_2 < 300) escala -= 0.01;
-  
-    
-    if (t_param >  M_PI) {
-        t_param = 0.0f;
-        caminho.clear(); // limpa para redesenhar
+public:
+    // Constructor to initialize the moon's properties.
+    Moon(GLfloat posX, GLfloat posY, GLfloat moonRadius, GLfloat moon_colors[2][3]) {
+        x = posX;
+        y = posY;
+        radius = moonRadius;
+        for (int i = 0; i < 3; i++) primary_color[i] = moon_colors[0][i];
+        for (int i = 0; i < 3; i++) secondary_color[i] = moon_colors[1][i];
     }
-    if(t_param_2 <  M_PI){
-		t_param_2 = 2*M_PI;
-		caminho_2.clear();
-	}
-	glutPostRedisplay();
-    glutTimerFunc(16, atualiza, 0);
+
+    // Renders the moon with its craters.
+    void draw() const {
+        // NOTE: Assumes a function `drawCircle(radius, segments, isFilled)` exists in "circulo.h".
+        glPushMatrix();
+            glTranslatef(x, y, 0);
+
+            // Draw the main body of the moon.
+            glColor3fv(primary_color);
+            drawCircle(radius, 360, true);
+
+            // Set color for the craters.
+            glColor3fv(secondary_color);
+
+            // Draw Crater 1.
+            glPushMatrix();
+                glTranslatef(radius * 0.5f, radius * 0.2f, 0);
+                drawCircle(radius / 3.5, 360, true);
+            glPopMatrix();
+
+            // Draw Crater 2.
+            glPushMatrix();
+                glTranslatef(radius * -0.4f, radius * 0.5f, 0);
+                drawCircle(radius / 3.5, 360, true);
+            glPopMatrix();
+
+            // Draw Crater 3.
+            glPushMatrix();
+                glTranslatef(radius * -0.2f, radius * -0.6f, 0);
+                drawCircle(radius / 3.5, 360, true);
+            glPopMatrix();
+        glPopMatrix();
+    }
+};
+
+// Represents a rocket.
+class Rocket {
+private:
+    GLfloat x, y, scale, angle;         // Position, scale, and angle of inclination.
+    GLfloat flame_color_primary[3];
+    GLfloat flame_color_secondary[3];
+    GLfloat window_color_primary[3];
+    GLfloat window_color_secondary[3];
+    GLfloat body_color[3];
+    GLfloat fin_color[3];
+
+public:
+    // Constructor to initialize the rocket's state and colors.
+    Rocket(GLfloat posX, GLfloat posY, GLfloat initial_angle, GLfloat scale, GLfloat rocket_colors[6][3]) {
+        x = posX;
+        y = posY;
+        this->scale = scale;
+        angle = initial_angle;
+        // Assign colors from the provided color palette.
+        for (int i = 0; i < 3; i++) flame_color_primary[i] = rocket_colors[0][i];
+        for (int i = 0; i < 3; i++) flame_color_secondary[i] = rocket_colors[1][i];
+        for (int i = 0; i < 3; i++) window_color_primary[i] = rocket_colors[2][i];
+        for (int i = 0; i < 3; i++) window_color_secondary[i] = rocket_colors[3][i];
+        for (int i = 0; i < 3; i++) body_color[i] = rocket_colors[4][i];
+        for (int i = 0; i < 3; i++) fin_color[i] = rocket_colors[5][i];
+    }
+
+    // Renders the entire rocket.
+    void draw() const {
+        // Isolate transformations for this rocket.
+        glPushMatrix();
+            // Apply transformations: move, scale, and rotate.
+            glTranslatef(x, y, 0);
+            glScalef(scale, scale, 0);
+            glRotatef(angle, 0, 0, 1);
+
+            // --- Draw Rocket Body ---
+            glColor3fv(body_color);
+            glBegin(GL_QUADS);
+                glVertex2f(0, 0);
+                glVertex2f(40, 0);
+                glVertex2f(40, 90);
+                glVertex2f(0, 90);
+            glEnd();
+            
+            // --- Draw Top Cone (as a triangle) ---
+            glColor3fv(fin_color); // Using fin color for the cone
+            glBegin(GL_TRIANGLES);
+                glVertex2f(0, 90);
+                glVertex2f(40, 90);
+                glVertex2f(20, 120); // Tip of the cone
+            glEnd();
+
+            // --- Draw Bottom Part ---
+            glColor3fv(window_color_primary);
+            glBegin(GL_QUADS);
+                glVertex2f(0, 0);
+                glVertex2f(40, 0);
+                glVertex2f(40, 8);
+                glVertex2f(0, 8);
+            glEnd();
+
+            // --- Draw Fins ---
+            glColor3fv(fin_color);
+            // Left Fin
+            glPushMatrix();
+                glBegin(GL_TRIANGLES);
+                    glVertex2f(0, 20);
+                    glVertex2f(0, 0);
+                    glVertex2f(-25, 10);
+                glEnd();
+            glPopMatrix();
+            // Right Fin
+            glPushMatrix();
+                glBegin(GL_TRIANGLES);
+                    glVertex2f(40, 20);
+                    glVertex2f(40, 0);
+                    glVertex2f(65, 10);
+                glEnd();
+            glPopMatrix();
+
+            // --- Draw Window ---
+            glPushMatrix();
+                glTranslatef(20, 67, 0);
+                glColor3fv(window_color_secondary);
+                drawCircle(15, 360, true); // Outer ring
+                glColor3fv(window_color_primary);
+                drawCircle(12, 360, true); // Inner glass
+            glPopMatrix();
+
+            // --- Draw Exhaust Flames ---
+            // Outer flame
+            glPushMatrix();
+                glTranslatef(20, -25, 0); // Position below the rocket
+                glScalef(0.8, 1.5, 0);
+                glColor3fv(flame_color_secondary);
+                glBegin(GL_TRIANGLES);
+                    glVertex2f(0, 0);
+                    glVertex2f(-20, 0);
+                    glVertex2f(0, -35); // Longest flame part
+                glEnd();
+                glBegin(GL_TRIANGLES);
+                    glVertex2f(0, 0);
+                    glVertex2f(20, 0);
+                    glVertex2f(0, -35);
+                glEnd();
+            glPopMatrix();
+            // Inner flame
+            glPushMatrix();
+                glTranslatef(20, -15, 0);
+                glScalef(0.6, 1.0, 0);
+                glColor3fv(flame_color_primary);
+                glBegin(GL_TRIANGLES);
+                    glVertex2f(0, 0);
+                    glVertex2f(-15, 0);
+                    glVertex2f(0, -25);
+                glEnd();
+                glBegin(GL_TRIANGLES);
+                    glVertex2f(0, 0);
+                    glVertex2f(15, 0);
+                    glVertex2f(0, -25);
+                glEnd();
+            glPopMatrix();
+
+        // Restore the previous matrix state.
+        glPopMatrix();
+    }
+};
+
+// Main function - entry point of the application.
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);                                  // Initialize GLUT.
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);            // Set display mode: single buffer and RGB color.
+    glutInitWindowSize(800, 400);                           // Set the window's initial width and height.
+    glutInitWindowPosition(100, 100);                       // Set the window's initial position.
+    glutCreateWindow("Rocket Animation - CG Project"); // Create a window with the given title.
+
+    initialize();                               // Call the initialization function.
+    glutReshapeFunc(reshape);                   // Register the reshape callback function.
+    glutDisplayFunc(display);                   // Register the display callback function.
+    glutKeyboardFunc(keyboard);                 // Register the keyboard callback function.
+    glutTimerFunc(16, update, 0);               // Set a timer to call the 'update' function every ~16ms (~60 FPS).
+    
+    glutMainLoop();                             // Enter the GLUT event processing loop.
+    return EXIT_SUCCESS;
 }
 
-void init(void){
-    glClearColor(0.090,0.216,0.369,1.0); //cor do fundo
+// This function is called periodically to update the animation state.
+void update(int value) {
+    // --- Rocket 1 Movement (Heart Curve) ---
+    // Parametric equation for a heart shape.
+    float x1 = 16 * pow(sin(time_param_1), 3);
+    float y1 = 13 * cos(time_param_1) - 5 * cos(2 * time_param_1) - 2 * cos(3 * time_param_1) - cos(4 * time_param_1);
+
+    // --- Rocket 2 Movement (Heart Curve, opposite direction) ---
+    float x2 = 16 * pow(sin(time_param_2), 3);
+    float y2 = 13 * cos(time_param_2) - 5 * cos(2 * time_param_2) - 2 * cos(3 * time_param_2) - cos(4 * time_param_2);
+
+    // Update rocket positions by scaling and translating the curve to the center of the path.
+    rocket1_posX = path_centerX + path_scale * x1;
+    rocket1_posY = path_centerY + path_scale * y1;
+    rocket2_posX = path_centerX + path_scale * x2;
+    rocket2_posY = path_centerY + path_scale * y2;
+
+    // --- Calculate Rocket Orientation ---
+    // To make the rockets point in their direction of travel, we calculate the derivative (tangent) of the path.
+    // Derivative of the x-component of the heart equation w.r.t. the parameter 't'.
+    float dx1 = 48 * pow(sin(time_param_1), 2) * cos(time_param_1);
+    // Derivative of the y-component.
+    float dy1 = -13 * sin(time_param_1) + 10 * sin(2 * time_param_1) + 6 * sin(3 * time_param_1) + 4 * sin(4 * time_param_1);
+    
+    float dx2 = 48 * pow(sin(time_param_2), 2) * cos(time_param_2);
+    float dy2 = -13 * sin(time_param_2) + 10 * sin(2 * time_param_2) + 6 * sin(3 * time_param_2) + 4 * sin(4 * time_param_2);
+
+    // Calculate the angle of the tangent vector using atan2 and convert it from radians to degrees.
+    rocket1_angle = atan2(dy1, dx1) * 180.0f / M_PI - 90; // Adjust by -90 because the rocket is drawn facing up.
+    rocket2_angle = atan2(dy2, dx2) * 180.0f / M_PI - 90;
+
+    // Store the current position to draw the trail.
+    rocket1_path.push_back({rocket1_posX, rocket1_posY});
+    rocket2_path.push_back({rocket2_posX, rocket2_posY});
+
+    // Increment/decrement the time parameters to move the rockets along the path.
+    time_param_1 += time_step;
+    time_param_2 -= time_step;
+
+    // --- Loop the Animation ---
+    // If rocket 1 completes its path, reset it.
+    if (time_param_1 > 2 * M_PI) {
+        time_param_1 = 0.0f;
+        rocket1_path.clear(); // Clear the trail for the new lap.
+    }
+    // If rocket 2 completes its path, reset it.
+    if (time_param_2 < 0) {
+        time_param_2 = 2 * M_PI;
+        rocket2_path.clear();
+    }
+    
+    glutPostRedisplay(); // Request a redraw of the window.
+    glutTimerFunc(16, update, 0); // Re-register the timer for the next frame.
 }
 
-
-
-void reshape(int w, int h)
-{
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glViewport(0, 0, w, h);
-
-    glOrtho (0, 800, 0, 400, -1 ,1);  
-	glMatrixMode(GL_MODELVIEW);
+// Initialization function.
+void initialize(void) {
+    glClearColor(0.090, 0.116, 0.269, 1.0); // Set the background color to a dark blue.
 }
 
+// Callback function for when the window is resized.
+void reshape(int w, int h) {
+    glMatrixMode(GL_PROJECTION); // Switch to the Projection matrix.
+    glLoadIdentity();            // Reset the matrix.
+    glViewport(0, 0, w, h);      // Set the viewport to be the entire window.
 
-void keyboard(unsigned char key, int x, int y){
+    // Set up a 2D orthographic projection.
+    // The world coordinates will range from (0,0) at the bottom-left to (800,400) at the top-right.
+    glOrtho(0, 800, 0, 400, -1, 1);
+    glMatrixMode(GL_MODELVIEW);  // Switch back to the Modelview matrix.
+}
+
+// Callback function for handling standard keyboard presses.
+void keyboard(unsigned char key, int x, int y) {
     switch (key) {
-        case ESC: exit(EXIT_SUCCESS); break; 
+        case ESC:               // If the ESC key is pressed...
+            exit(EXIT_SUCCESS); // ...exit the application.
+            break;
     }
 }
 
-
-void desenhaCaminho(vector<pair<float,float> >c, GLfloat cor[3] ) {
-    glColor3fv(cor); // cor rosa para o rastro
-    glPointSize(3.0f);        // tamanho dos pontos
+// Draws the path (trail) of a rocket.
+void drawPath(vector<pair<float, float>> path, GLfloat color[3]) {
+    glColor3fv(color);       // Set the color for the trail.
+    glPointSize(3.0f);       // Set the size of the points.
 
     glBegin(GL_POINTS);
-    for (int i = 0; i < c.size(); i++) {
-        glVertex2f(c[i].first, c[i].second);
+    for (int i = 0; i < path.size(); i++) {
+        glVertex2f(path[i].first, path[i].second);
     }
     glEnd();
 }
 
+// The main display callback function. This is where all the rendering happens.
+void display(void) {
+    // Clear the color buffer to the background color set in initialize().
+    glClear(GL_COLOR_BUFFER_BIT);
+    // Reset the modelview matrix for this frame.
+    glLoadIdentity();
 
-void display(void){
-	//Limpa o Buffer de Cores e reinicia a matriz
-    glClear(GL_COLOR_BUFFER_BIT); 
-	glLoadIdentity();
+    // --- Draw Scenery ---
+    Star star1(300, 100, 0.15, star_color);
+    star1.draw();
+    Star star2(480, 280, 0.25, star_color);
+    star2.draw();
+    Star star3(560, 160, 0.15, star_color);
+    star3.draw();
+    Star star4(680, 70, 0.25, star_color);
+    star4.draw();
+    Star star5(90, 340, 0.25, star_color);
+    star5.draw();
+    Moon moon(700, 300, 70, moon_colors);
+    moon.draw();
 
-    
-	Estrela t1(300,100,0.15, cor_estrelas);
-    t1.draw();
-    Estrela t2(480,280,0.25, cor_estrelas);
-    t2.draw();
- 	Estrela t3(560,160,0.15, cor_estrelas);
-    t3.draw();
-    Estrela t4(680,70,0.25, cor_estrelas);
-    t4.draw();
-    Estrela t5(90,340,0.25, cor_estrelas);
-    t5.draw();
-    Lua lua(700,300,70,cores_lua);
-    lua.draw();
-    desenhaCaminho(caminho,rosa_caminho);
-    Foguete foguete(foguetePosX,foguetePosY,fogueteAngulo,0.8,cores_foguete);
-    foguete.draw();
-    desenhaCaminho(caminho_2,vermelho_caminho);
-    glPushMatrix();
-    glTranslated(-1,1,0);
-     Foguete foguete2(foguetePosX_2,foguetePosY_2,fogueteAngulo_2,escala,cores_foguete_2);
-    foguete2.draw();
-    glPopMatrix();
+    // --- Draw Rocket Trails ---
+    drawPath(rocket1_path, path1_color);
+    drawPath(rocket2_path, path2_color);
 
-    glFlush(); 
+    // --- Draw Rockets ---
+    Rocket rocket1(rocket1_posX, rocket1_posY, rocket1_angle, 0.8, rocket1_colors);
+    rocket1.draw();
+    Rocket rocket2(rocket2_posX, rocket2_posY, rocket2_angle, rocket2_scale, rocket2_colors);
+    rocket2.draw();
 
+    // Execute all the buffered OpenGL commands.
+    glFlush();
 }
-
-
-

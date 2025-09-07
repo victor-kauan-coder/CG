@@ -1,34 +1,63 @@
 /*
- * Computacao Grafica
- * Codigo Exemplo: Biblioteca com fucao para desenhar circulo em OpenGL
- * Autor: Prof. Laurindo de Sousa Britto Neto
+ * Computer Graphics
+ * Example Code: Library with a function to draw a circle in OpenGL
+ * Original Author: Prof. Laurindo de Sousa Britto Neto
+ * Refactored and Commented by: Gemini AI
  */
 
-#ifndef circulo_h
-#define circulo_h
+// Header guard to prevent multiple inclusions of this file,
+// which would cause redefinition errors.
+#ifndef CIRCLE_H
+#define CIRCLE_H
 
 #include <cmath>
 
+// Define the mathematical constant PI if it's not already defined by the cmath header.
 #ifndef M_PI
     #define M_PI 3.14159265f
 #endif
 
-void desenhaCirculo(float raio, int num_linhas,bool preenchido)
+/**
+ * @brief Draws a circle centered at the origin (0,0) in the current model-view matrix.
+ * * This function uses OpenGL's GL_TRIANGLE_FAN for a filled circle or GL_LINE_LOOP
+ * for an outline. The smoothness of the circle is determined by the number of segments.
+ * * @param radius The radius of the circle.
+ * @param num_segments The number of line segments used to approximate the circle. 
+ * More segments result in a smoother circle.
+ * @param isFilled If true, the circle is drawn filled; otherwise, only its outline is drawn.
+ */
+void drawCircle(float radius, int num_segments, bool isFilled)
 {
-    int i;
-    GLfloat angulo;
-   
-    angulo = (2 * M_PI) / num_linhas; //divide 360 graus em radianos pela quantidade de linhas que serao desenhadas
- 
-    if(preenchido) glBegin(GL_TRIANGLE_FAN);   // Primitiva que liga os vertices, gerando triangulos com o primeiro vertice em comum
-    else glBegin(GL_LINE_LOOP);     // Primitiva que liga os vertices, gerando segmentos de reta em um loop
-    
-    for(i = 1; i <= num_linhas; i++) // FOR usado para o calculo de cada ponto pertencente aos extremos das retas
+    // The angle increment for each segment in radians.
+    // A full circle is 2*PI radians.
+    GLfloat angle_increment = (2.0f * M_PI) / num_segments;
+
+    // Choose the appropriate OpenGL primitive based on whether the circle should be filled.
+    if (isFilled) {
+        // GL_TRIANGLE_FAN creates a series of triangles that share a common central vertex.
+        glBegin(GL_TRIANGLE_FAN);
+        
+        // The first vertex is the center of the fan (and our circle).
+        glVertex2f(0.0f, 0.0f);
+    }
+    else {
+        // GL_LINE_LOOP connects all vertices in order and then connects the last vertex back to the first.
+        glBegin(GL_LINE_LOOP);
+    }
+
+    // Loop through each segment to calculate and draw its vertex on the circumference.
+    for (int i = 0; i <= num_segments; i++) 
     {
-		// comando que calcula as coord. da rotacao e desenha as retas na tela
-        glVertex2f(-raio*sin(i * angulo) , raio*cos(i * angulo));	// centro = (0,0), x = 0 e y = raio;
-//		glVertex2f(raio*cos(i * angulo) , raio*sin(i * angulo));	// centro = (0,0), x = raio e y = 0;
-	}
-    glEnd(); 
+        float current_angle = i * angle_increment;
+        // Calculate the (x, y) coordinates for the vertex using parametric circle equations.
+        // x = r * cos(theta)
+        // y = r * sin(theta)
+        // Note: The original code used a rotated version. This is the more standard orientation.
+        glVertex2f(radius * cos(current_angle), radius * sin(current_angle));
+    }
+    
+    // Finalize the drawing primitive.
+    glEnd();
 }
-#endif /* circulo_h */
+
+#endif /* CIRCLE_H */
