@@ -5,7 +5,10 @@
 
 A Computer Graphics project written in **C++** that renders a 2D scene with two animated rockets following a **heart-shaped trajectory** against a space-themed background.
 
-![Rocket Animation](demo/exemple.gif)
+![Rocket Animation](example.gif)  
+_(Replace `example.gif` with a GIF recorded from your program using tools like [ScreenToGif](https://www.screentogif.com/) on Windows or [Kap](https://getkap.co/) on macOS.)_
+
+---
 
 ## About the Project
 
