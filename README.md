@@ -79,6 +79,7 @@ Open a terminal in the project’s root folder and run:
   ```
 
 - **Windows(MinGW):**
-  ```g++ main.cpp -o rocket -lfreeglut -lopengl32 -lglu32
+  ```bash
+  g++ main.cpp -o rocket -lfreeglut -lopengl32 -lglu32
   rocket.exe
   ```
